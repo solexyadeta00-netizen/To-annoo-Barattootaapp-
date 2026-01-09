@@ -1,292 +1,274 @@
 
-import tkinter as tk
-from tkinter import messagebox, ttk, scrolledtext
+import flet as ft
 import json
 import os
 
-class SoftwareBarataaPro:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Software To'annoo Barattootaa Pro")
-        self.root.geometry("600x800")
-        self.root.configure(bg="#f4f7f6")
-        
-        self.students = {}
-        self.subjects = ["A/Oromoo", "Ing", "Her", "S/Naannoo", "Gadaa", "Safuu", "Og-Artii", "Amariffa", "Fjq"]
-        
-        if os.path.exists("data_final.json"):
-            with open("data_final.json", "r") as f:
-                data = json.load(f)
-                self.students = {int(k): v for k, v in data.items()}
+# --- SOFTWARE TO'ANNOO BARATTOOTAA PRO (FLET VERSION) ---
 
-        self.main_menu()
+def main(page: ft.Page):
+    page.title = "Software To'annoo Barattootaa Pro"
+    page.theme_mode = ft.ThemeMode.LIGHT
+    page.scroll = ft.ScrollMode.AUTO
+    page.padding = 20
+    
+    # Config for Mobile
+    page.window_width = 450
+    page.window_height = 850
 
-    def clear_frame(self):
-        for widget in self.root.winfo_children():
-            widget.destroy()
+    # --- DATA MANAGEMENT (STRUCTURE) ---
+    DB_FILE = "data_final.json"
+    students = {}
+    subjects = [
+        "A/Oromoo", "Ing", "Her", "S/Naannoo", 
+        "Gadaa", "Safuu", "Og-Artii", "Amariffa", "Fjq"
+    ]
 
-    def main_menu(self):
-        self.clear_frame()
-        header = tk.Frame(self.root, bg="#2c3e50", height=100)
-        header.pack(fill=tk.X)
-        tk.Label(header, text="MAIN MENU", font=("Arial", 24, "bold"), bg="#2c3e50", fg="#ecf0f1").pack(pady=20)
-        
-        btn_frame = tk.Frame(self.root, bg="#f4f7f6")
-        btn_frame.pack(pady=20)
+    def load_data():
+        nonlocal students
+        if os.path.exists(DB_FILE):
+            with open(DB_FILE, "r") as f:
+                try:
+                    data = json.load(f)
+                    students = {int(k): v for k, v in data.items()}
+                except:
+                    students = {}
+        else:
+            students = {}
 
-        menus = [
-            ("1. Barattoota Galmeessuu", "#3498db", self.ui_register),
-            ("2. Odeeffannoo Jijjiruu", "#f1c40f", self.ui_edit),
-            ("3. Qabxii Galmeessuu", "#1abc9c", self.ui_input_scores),
-            ("4. Kuusaa Qabxii Ilaaluu", "#9b59b6", self.ui_archive),
-            ("5. Qaacceessa Qabxii", "#e67e22", self.ui_analysis_main),
-            ("6. Barattoota Hunda Ilaaluu", "#34495e", self.ui_view_all),
-            ("7. Odeeffannoo Kuusuu (Save)", "#2ecc71", self.save_data),
-            ("8. Odeeffannoo Haquu", "#e74c3c", self.ui_delete),
-            ("9. Sagantaa Cufi", "#7f8c8d", self.root.quit)
-        ]
+    def save_data(e=None):
+        with open(DB_FILE, "w") as f:
+            json.dump(students, f)
+        if e:
+            page.snack_bar = ft.SnackBar(ft.Text("Odeeffannoon milkiin kuufameera!"), bgcolor=ft.colors.GREEN)
+            page.snack_bar.open = True
+            page.update()
 
-        for text, color, cmd in menus:
-            tk.Button(btn_frame, text=text, command=cmd, width=40, bg=color, fg="white", 
-                      font=("Arial", 11, "bold"), pady=10, relief=tk.FLAT, cursor="hand2").pack(pady=5)
+    load_data()
 
-    # --- 1. Galmeessuu ---
-    def ui_register(self):
-        self.clear_frame()
-        tk.Label(self.root, text="Barattoota Galmeessuu", font=("Arial", 18, "bold"), bg="#f4f7f6").pack(pady=20)
-        fields = ["Maqaa", "Korn (Dhi/Dub)", "Umrii", "Kutaa", "Bara"]
-        ents = {}
-        for f in fields:
-            f_row = tk.Frame(self.root, bg="#f4f7f6")
-            f_row.pack(pady=5)
-            tk.Label(f_row, text=f"{f}:", width=15, anchor="w", bg="#f4f7f6").pack(side=tk.LEFT)
-            e = tk.Entry(f_row, font=("Arial", 12)); e.pack(side=tk.RIGHT)
-            ents[f] = e
-        
-        def save():
-            new_id = len(self.students) + 1
-            self.students[new_id] = {
-                'id': new_id, 'name': ents["Maqaa"].get(), 'gender': ents["Korn (Dhi/Dub)"].get(),
-                'age': ents["Umrii"].get(), 'grade': ents["Kutaa"].get(), 'year': ents["Bara"].get(),
-                'scores': {'sem1': {s: 0 for s in self.subjects}, 'sem2': {s: 0 for s in self.subjects}}
-            }
-            messagebox.showinfo("Milkii", f"Barataan ID {new_id} galmaa'eera")
-            self.main_menu()
-        tk.Button(self.root, text="GALMEESSI", bg="#2ecc71", fg="white", command=save, pady=10, width=20).pack(pady=20)
-        tk.Button(self.root, text="DEEBI'I", command=self.main_menu).pack()
+    # --- NAVIGATION LOGIC ---
+    def go_back(e):
+        page.views.pop()
+        top_view = page.views[-1]
+        page.go(top_view.route)
 
-    # --- 2. Edit (Jijjiruu) ---
-    def ui_edit(self):
-        self.clear_frame()
-        tk.Label(self.root, text="Odeeffannoo Jijjiruu", font=("Arial", 18, "bold"), bg="#f4f7f6").pack(pady=20)
-        tk.Label(self.root, text="ID Barataa:").pack()
-        e_id = tk.Entry(self.root); e_id.pack()
+    # --- 1. REGISTER (GALMEESSUU) ---
+    def ui_register():
+        name_ref = ft.TextField(label="Maqaa Guutuu", border_color=ft.colors.BLUE)
+        gender_ref = ft.TextField(label="Kornaya (Dhi/Dub)")
+        age_ref = ft.TextField(label="Umrii", keyboard_type=ft.KeyboardType.NUMBER)
+        grade_ref = ft.TextField(label="Kutaa")
+        year_ref = ft.TextField(label="Bara")
 
-        def edit_win():
-            sid = int(e_id.get())
-            if sid in self.students:
-                win = tk.Toplevel(self.root); win.geometry("400x500")
-                std = self.students[sid]
-                ents = {}
-                for k in ['name', 'gender', 'age', 'grade', 'year']:
-                    tk.Label(win, text=k).pack(); e = tk.Entry(win); e.insert(0, std[k]); e.pack(); ents[k] = e
-                
-                tk.Label(win, text="Sem (sem1/sem2)").pack(); e_sem = tk.Entry(win); e_sem.pack()
-                tk.Label(win, text="Gosa Barnootaa").pack(); e_sub = tk.Entry(win); e_sub.pack()
-                tk.Label(win, text="Qabxii Haaraa").pack(); e_scr = tk.Entry(win); e_scr.pack()
-
-                def update():
-                    for k, e in ents.items(): std[k] = e.get()
-                    if e_sem.get() and e_sub.get():
-                        std['scores'][e_sem.get()][e_sub.get()] = float(e_scr.get())
-                    messagebox.showinfo("Milkii", "Jijjiramni kuufameera"); win.destroy()
-                tk.Button(win, text="UPDATE", command=update, bg="blue", fg="white").pack(pady=10)
-            else: messagebox.showerror("Error", "ID hin jiru")
-        tk.Button(self.root, text="Jijjiri", command=edit_win, bg="#f1c40f").pack(pady=10)
-        tk.Button(self.root, text="Deebi'i", command=self.main_menu).pack()
-
-    # --- 3. Qabxii (Empty 0) ---
-    def ui_input_scores(self):
-        self.clear_frame()
-        tk.Label(self.root, text="Qabxii Galmeessuu", font=("Arial", 18, "bold")).pack(pady=20)
-        tk.Label(self.root, text="ID Barataa:").pack(); e_id = tk.Entry(self.root); e_id.pack()
-        tk.Label(self.root, text="Semister (sem1/sem2):").pack(); e_sem = tk.Entry(self.root); e_sem.pack()
-
-        def open_scr():
-            sid = int(e_id.get()); sem = e_sem.get().lower()
-            if sid in self.students:
-                win = tk.Toplevel(self.root); win.title(f"ID: {sid}")
-                scr_ents = {}
-                for s in self.subjects:
-                    r = tk.Frame(win); r.pack()
-                    tk.Label(r, text=s, width=15).pack(side=tk.LEFT)
-                    e = tk.Entry(r); val = self.students[sid]['scores'][sem][s]
-                    if val != 0: e.insert(0, str(val)) # 0 Haqamee jira
-                    e.pack(side=tk.RIGHT); scr_ents[s] = e
-                def save():
-                    for s in self.subjects: 
-                        self.students[sid]['scores'][sem][s] = float(scr_ents[s].get() or 0)
-                    messagebox.showinfo("Ok", "Qabxiin kuufameera"); win.destroy()
-                tk.Button(win, text="KUUSI", command=save, bg="green", fg="white").pack()
-            else: messagebox.showerror("Err", "ID hin jiru")
-        tk.Button(self.root, text="QABXII GALCHI", command=open_scr, bg="#1abc9c").pack(pady=10)
-        tk.Button(self.root, text="Deebi'i", command=self.main_menu).pack()
-
-    # --- 4. Archive (Sem1, Sem2, Total) ---
-    def ui_archive(self):
-        self.clear_frame()
-        tk.Label(self.root, text="Kuusaa Qabxii", font=("Arial", 18, "bold")).pack()
-        tk.Label(self.root, text="Kutaa:").pack(); e_g = tk.Entry(self.root); e_g.pack()
-        tk.Label(self.root, text="Bara:").pack(); e_y = tk.Entry(self.root); e_y.pack()
-
-        def show():
-            win = tk.Toplevel(self.root); win.geometry("500x700")
-            txt = scrolledtext.ScrolledText(win, font=("Courier", 10))
-            txt.pack(fill=tk.BOTH, expand=True)
-            g, y = e_g.get(), e_y.get()
-            peers = [i for i, s in self.students.items() if s['grade'] == g and s['year'] == y]
+        def register_action(e):
+            if not name_ref.value:
+                name_ref.error_text = "Maqaan hin guutamne!"
+                page.update()
+                return
             
-            # Ranking (Sem1 + Sem2)
-            rank_data = []
-            for i in peers:
-                t = sum(self.students[i]['scores']['sem1'].values()) + sum(self.students[i]['scores']['sem2'].values())
-                rank_data.append((i, t))
-            rank_data.sort(key=lambda x: x[1], reverse=True)
-            ranks = {sid: r for r, (sid, tot) in enumerate(rank_data, 1)}
+            new_id = (max(students.keys()) + 1) if students else 1
+            students[new_id] = {
+                'id': new_id,
+                'name': name_ref.value,
+                'gender': gender_ref.value,
+                'age': age_ref.value,
+                'grade': grade_ref.value,
+                'year': year_ref.value,
+                'scores': {
+                    'sem1': {s: 0 for s in subjects},
+                    'sem2': {s: 0 for s in subjects}
+                }
+            }
+            save_data()
+            page.snack_bar = ft.SnackBar(ft.Text(f"Barataan ID {new_id} galmaa'eera!"))
+            page.snack_bar.open = True
+            page.go("/")
 
-            for i in peers:
-                s = self.students[i]; s1 = s['scores']['sem1']; s2 = s['scores']['sem2']
-                txt.insert(tk.END, f"ID: {i} | Maqaa: {s['name']} | Korn: {s['gender']} | Umrii: {s['age']}\n{'-'*50}\n")
-                txt.insert(tk.END, f"{'Subject':<15} | {'Sem1':<6} | {'Sem2':<6} | {'Total':<6}\n")
-                for sub in self.subjects:
-                    v1, v2 = s1[sub], s2[sub]
-                    txt.insert(tk.END, f"{sub:<15} | {v1:<6} | {v2:<6} | {v1+v2:<6}\n")
-                t_total = sum(s1.values()) + sum(s2.values())
-                avg = round(t_total / (len(self.subjects)*2), 2)
-                txt.insert(tk.END, f"\nSem1 Tot={sum(s1.values())} | Sem2 Tot={sum(s2.values())}\n")
-                txt.insert(tk.END, f"Ida'ama Waliigalaa = {t_total}\nAvg = {avg}\nSadarkaa = {ranks[i]}\n{'='*50}\n\n")
+        page.views.append(
+            ft.View("/register", [
+                ft.AppBar(title=ft.Text("Barattoota Galmeessuu"), bgcolor=ft.colors.BLUE_700, color="white"),
+                ft.Column([
+                    ft.Text("Odeeffannoo Barataa Haaraa", size=18, weight="bold"),
+                    name_ref, gender_ref, age_ref, grade_ref, year_ref,
+                    ft.ElevatedButton("GALMEESSI", on_click=register_action, bgcolor=ft.colors.GREEN, color="white", width=400, height=50),
+                    ft.TextButton("DUUBATTI DEEBI'I", on_click=go_back)
+                ], spacing=15, scroll=ft.ScrollMode.ALWAYS)
+            ])
+        )
+        page.update()
 
-        tk.Button(self.root, text="ILAALI", command=show, bg="#9b59b6", fg="white").pack(pady=10)
-        tk.Button(self.root, text="Deebi'i", command=self.main_menu).pack()
+    # --- 2. EDIT (ODEERFFANNOO JIJJIIRUU) ---
+    def ui_edit():
+        id_find = ft.TextField(label="ID Barataa Jijjiramaa", keyboard_type=ft.KeyboardType.NUMBER)
+        edit_container = ft.Column()
 
-    # --- 5. Analysis Sub-Menus ---
-    def ui_analysis_main(self):
-        self.clear_frame()
-        tk.Label(self.root, text="Qaacceessa Qabxii", font=("Arial", 20, "bold"), bg="#f4f7f6").pack(pady=20)
-        tk.Label(self.root, text="Kutaa:").pack(); e_g = tk.Entry(self.root); e_g.pack()
-        tk.Label(self.root, text="Bara:").pack(); e_y = tk.Entry(self.root); e_y.pack()
+        def load_for_edit(e):
+            try:
+                sid = int(id_find.value)
+                if sid in students:
+                    st = students[sid]
+                    edit_container.controls.clear()
+                    n_e = ft.TextField(label="Maqaa", value=st['name'])
+                    g_e = ft.TextField(label="Kutaa", value=st['grade'])
+                    y_e = ft.TextField(label="Bara", value=st['year'])
+                    
+                    def update_done(e):
+                        students[sid]['name'] = n_e.value
+                        students[sid]['grade'] = g_e.value
+                        students[sid]['year'] = y_e.value
+                        save_data(True)
+                        page.go("/")
 
-        btn_box = tk.Frame(self.root, bg="#f4f7f6")
-        btn_box.pack(pady=20)
-        
-        btns = [
-            ("1. Qaacceessa Barattoota fi Barnootaa", "#3498db", lambda: self.logic_ana_1(e_g.get(), e_y.get())),
-            ("2. Qaacceessa Barnootaa (Ida/Avg)", "#1abc9c", lambda: self.logic_ana_2(e_g.get(), e_y.get())),
-            ("3. Sadarkaa Barattootaa (1-3)", "#f1c40f", lambda: self.logic_ana_3(e_g.get(), e_y.get())),
-            ("GARA MAIN MENUTTI", "#7f8c8d", self.main_menu)
-        ]
-        for t, c, cmd in btns:
-            tk.Button(btn_box, text=t, bg=c, fg="white", font=("Arial", 10, "bold"), width=35, pady=8, command=cmd).pack(pady=5)
+                    edit_container.controls.extend([n_e, g_e, y_e, ft.ElevatedButton("JIJJIRAA FEE'I", on_click=update_done, bgcolor=ft.colors.AMBER_800, color="white")])
+                    page.update()
+                else:
+                    page.snack_bar = ft.SnackBar(ft.Text("ID hin argamne!"))
+                    page.snack_bar.open = True
+                    page.update()
+            except: pass
 
-    def logic_ana_1(self, g, y):
-        win = tk.Toplevel(self.root); txt = scrolledtext.ScrolledText(win, width=60)
-        txt.pack(fill=tk.BOTH, expand=True)
-        peers = [i for i, s in self.students.items() if s['grade'] == g and s['year'] == y]
-        
-        def mfw(id_list, cond=None):
-            d = len([i for i in id_list if self.students[i]['gender'].lower() in ['dhi','m'] and (cond(i) if cond else True)])
-            f = len([i for i in id_list if self.students[i]['gender'].lower() in ['dub','f'] and (cond(i) if cond else True)])
-            return d, f, d+f
+        page.views.append(
+            ft.View("/edit", [
+                ft.AppBar(title=ft.Text("Odeeffannoo Jijjiruu"), bgcolor=ft.colors.AMBER_700),
+                id_find, ft.ElevatedButton("BARATAA BARBAADI", on_click=load_for_edit),
+                edit_container,
+                ft.TextButton("DUUBATTI", on_click=go_back)
+            ], scroll=ft.ScrollMode.ALWAYS)
+        )
+        page.update()
 
-        txt.insert(tk.END, "Baay'ina Barattoota Galma'anii\n")
-        d, f, w = mfw(peers); txt.insert(tk.END, f"Dhi={d}\nDub={f}\nW/gala={w}\n{'-'*20}\n")
-        
-        # Qoramanii (at least one score > 0)
-        q_ids = [i for i in peers if sum(self.students[i]['scores']['sem1'].values()) > 0]
-        txt.insert(tk.END, "Baay'ina Barattoota Qoramanii\n")
-        d, f, w = mfw(q_ids); txt.insert(tk.END, f"Dhi={d}\nDub={f}\nW/gala={w}\n{'-'*20}\n")
+    # --- 3. INPUT SCORES (QABXII GALMEESSUU) ---
+    def ui_input_scores():
+        id_in = ft.TextField(label="ID Barataa Galchi", width=150)
+        sem_in = ft.Dropdown(label="Semisterii", options=[ft.dropdown.Option("sem1"), ft.dropdown.Option("sem2")], width=150)
+        fields_container = ft.Column()
 
-        # Kufanii (Avg sem1 < 50)
-        k_ids = [i for i in q_ids if (sum(self.students[i]['scores']['sem1'].values())/len(self.subjects)) < 50]
-        txt.insert(tk.END, "Baay'ina Barattoota Kufanii\n")
-        d, f, w = mfw(k_ids); txt.insert(tk.END, f"Dhi={d}\nDub={f}\nW/gala={w}\n{'-'*20}\n")
+        def fetch_scores(e):
+            try:
+                sid = int(id_in.value)
+                sem = sem_in.value
+                if sid in students and sem:
+                    fields_container.controls.clear()
+                    fields_container.controls.append(ft.Text(f"Qabxii: {students[sid]['name']} ({sem})", size=16, weight="bold"))
+                    
+                    score_inputs = {}
+                    for s in subjects:
+                        val = students[sid]['scores'][sem].get(s, 0)
+                        tf = ft.TextField(label=s, value=str(val), width=200, keyboard_type=ft.KeyboardType.NUMBER)
+                        fields_container.controls.append(tf)
+                        score_inputs[s] = tf
+                    
+                    def save_scores_action(e):
+                        for s, tf in score_inputs.items():
+                            students[sid]['scores'][sem][s] = tf.value
+                        save_data(True)
+                        page.go("/")
 
-        txt.insert(tk.END, "\nQAACCEESSA GOSA BARNOOTAA\n" + "="*30 + "\n")
-        for sub in self.subjects:
-            txt.insert(tk.END, f"\n{sub.upper()}\n{'_'*15}\n")
-            ranges = [("50 gadi", 0, 49), ("50-64", 50, 64), ("65-79", 65, 79), ("80-89", 80, 89), ("90-100", 90, 100)]
-            for lbl, low, high in ranges:
-                txt.insert(tk.END, f"Baay'ina {lbl} fidanii:\n")
-                d, f, w = mfw(q_ids, lambda i: low <= self.students[i]['scores']['sem1'][sub] <= high)
-                txt.insert(tk.END, f"      Dhi={d}\n      Dub={f}\n      W/gala={w}\n")
+                    fields_container.controls.append(ft.ElevatedButton("QABXII KUUSI", on_click=save_scores_action, bgcolor=ft.colors.TEAL, color="white"))
+                    page.update()
+            except: pass
 
-    def logic_ana_2(self, g, y):
-        win = tk.Toplevel(self.root); txt = scrolledtext.ScrolledText(win)
-        txt.pack(fill=tk.BOTH, expand=True)
-        peers = [i for i, s in self.students.items() if s['grade'] == g and s['year'] == y]
-        txt.insert(tk.END, f"Qaacceessa Barnootaa Kutaa {g}\n" + "="*30 + "\n")
-        for sub in self.subjects:
-            total_sum = sum(self.students[i]['scores']['sem1'][sub] for i in peers)
-            avg = round(total_sum / len(peers), 2) if peers else 0
-            txt.insert(tk.END, f"{sub}\nIda = {total_sum}\nAvg = {avg}\n{'-'*20}\n")
+        page.views.append(
+            ft.View("/scores", [
+                ft.AppBar(title=ft.Text("Qabxii Galmeessuu"), bgcolor=ft.colors.TEAL_800),
+                ft.Row([id_in, sem_in, ft.IconButton(ft.icons.SEARCH, on_click=fetch_scores)]),
+                fields_container,
+                ft.TextButton("DUUBATTI", on_click=go_back)
+            ], scroll=ft.ScrollMode.ALWAYS)
+        )
+        page.update()
 
-    def logic_ana_3(self, g, y):
-        win = tk.Toplevel(self.root); win.geometry("450x600")
-        txt = scrolledtext.ScrolledText(win, font=("Arial", 10))
-        txt.pack(fill=tk.BOTH, expand=True)
-        peers = [i for i, s in self.students.items() if s['grade'] == g and s['year'] == y]
-        
-        rank_list = []
-        for i in peers:
-            t = sum(self.students[i]['scores']['sem1'].values()) + sum(self.students[i]['scores']['sem2'].values())
-            rank_list.append((i, t))
-        rank_list.sort(key=lambda x: x[1], reverse=True)
+    # --- 5 & 6. ANALYSIS & VIEW ALL ---
+    def ui_view_all():
+        table = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("ID")),
+                ft.DataColumn(ft.Text("Maqaa")),
+                ft.DataColumn(ft.Text("Kutaa")),
+                ft.DataColumn(ft.Text("Sem1 Total")),
+            ],
+            rows=[]
+        )
 
-        txt.insert(tk.END, f"Sadarkaa Barattootaa Kutaa {g} ({y})\n" + "="*40 + "\n")
-        # Top 3 Overall
-        txt.insert(tk.END, "SADARKAA WALIGALAA (1-3):\n")
-        for r, (sid, tot) in enumerate(rank_list[:3], 1):
-            s = self.students[sid]
-            txt.insert(tk.END, f"{r}. {s['name']}, {s['gender']}, {s['age']}\nIda={tot}\nAvg={round(tot/(len(self.subjects)*2), 2)}\nSad={r}\n{'-'*20}\n")
-        
-        # Top 3 Girls
-        txt.insert(tk.END, "\nSADARKAA SHAMARRANII (1-3):\n")
-        girls = [(sid, tot) for sid, tot in rank_list if self.students[sid]['gender'].lower() in ['dub', 'f', 'female']]
-        for r, (sid, tot) in enumerate(girls[:3], 1):
-            s = self.students[sid]
-            txt.insert(tk.END, f"{r}. {s['name']}, {s['gender']}, {s['age']}\nIda={tot}\nAvg={round(tot/(len(self.subjects)*2), 2)}\nSad={r}\n{'-'*20}\n")
+        for sid, st in students.items():
+            s1_total = sum([float(v) for v in st['scores']['sem1'].values()])
+            table.rows.append(ft.DataRow(cells=[
+                ft.DataCell(ft.Text(str(sid))),
+                ft.DataCell(ft.Text(st['name'])),
+                ft.DataCell(ft.Text(st['grade'])),
+                ft.DataCell(ft.Text(str(s1_total))),
+            ]))
 
-    # --- Utility ---
-    def save_data(self):
-        with open("data_final.json", "w") as f: json.dump(self.students, f)
-        messagebox.showinfo("Milkii", "Odeeffannoon hundi kuufameera.")
+        page.views.append(
+            ft.View("/view_all", [
+                ft.AppBar(title=ft.Text("Tarree Barattootaa"), bgcolor=ft.colors.BLUE_GREY_700),
+                ft.Column([table], scroll=ft.ScrollMode.ALWAYS, expand=True),
+                ft.TextButton("DUUBATTI", on_click=go_back)
+            ])
+        )
+        page.update()
 
-    def ui_view_all(self):
-        win = tk.Toplevel(self.root); txt = scrolledtext.ScrolledText(win)
-        txt.pack(); txt.insert(tk.END, "BARATTOOTA HUNDA\n" + "="*30 + "\n")
-        for i, s in self.students.items():
-            txt.insert(tk.END, f"ID: {i} | {s['name']} | {s['grade']} | {s['year']}\n")
+    # --- 8. DELETE (ODEERFFANNOO HAQUU) ---
+    def ui_delete():
+        id_del = ft.TextField(label="ID Barataa Haquu Galchi")
+        def delete_now(e):
+            try:
+                sid = int(id_del.value)
+                if sid in students:
+                    del students[sid]
+                    save_data(True)
+                    page.go("/")
+            except: pass
 
-    def ui_delete(self):
-        self.clear_frame()
-        tk.Label(self.root, text="Odeeffannoo Haquu", font=("Arial", 18, "bold"), fg="red").pack(pady=20)
-        tk.Label(self.root, text="ID Barataa:").pack(); e_id = tk.Entry(self.root); e_id.pack()
-        
-        def del_one():
-            sid = int(e_id.get())
-            if sid in self.students: 
-                del self.students[sid]
-                # Auto Re-order IDs
-                temp = sorted(self.students.values(), key=lambda x: x['id'])
-                self.students = {i+1: {**data, 'id': i+1} for i, data in enumerate(temp)}
-                messagebox.showinfo("Ok", "Haqamee ID'n haareffameera.")
-            self.main_menu()
-        
-        tk.Button(self.root, text="Barataa Tokko Haqu", bg="red", fg="white", command=del_one).pack(pady=10)
-        tk.Button(self.root, text="Hunda Haqu", bg="black", fg="white", command=lambda:(self.students.clear(), self.main_menu())).pack()
-        tk.Button(self.root, text="Deebi'i", command=self.main_menu).pack(pady=10)
+        page.views.append(
+            ft.View("/delete", [
+                ft.AppBar(title=ft.Text("Odeeffannoo Haquu"), bgcolor=ft.colors.RED_800),
+                id_del,
+                ft.ElevatedButton("HAQUU (DELETE)", bgcolor=ft.colors.RED, color="white", on_click=delete_now),
+                ft.TextButton("DUUBATTI", on_click=go_back)
+            ])
+        )
+        page.update()
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = SoftwareBarataaPro(root)
-    root.mainloop()
+    # --- KEYBOARD SHORTCUTS (1-9) ---
+    def on_keyboard(e: ft.KeyboardEvent):
+        if page.route == "/":
+            if e.key == "1": ui_register()
+            elif e.key == "2": ui_edit()
+            elif e.key == "3": ui_input_scores()
+            elif e.key == "4" or e.key == "6": ui_view_all()
+            elif e.key == "7": save_data(True)
+            elif e.key == "8": ui_delete()
+            elif e.key == "9": page.window_close()
+
+    page.on_keyboard_event = on_keyboard
+
+    # --- MAIN MENU BUILDER ---
+    def build_main_menu():
+        page.route = "/"
+        page.views.append(
+            ft.View("/", [
+                ft.AppBar(title=ft.Text("MAIN MENU"), bgcolor=ft.colors.BLUE_GREY_900, color="white", automatically_imply_leading=False),
+                ft.Container(
+                    content=ft.Column([
+                        ft.ElevatedButton("1. Barattoota Galmeessuu", on_click=lambda _: ui_register(), width=380, height=45, icon=ft.icons.PERSON_ADD),
+                        ft.ElevatedButton("2. Odeeffannoo Jijjiruu", on_click=lambda _: ui_edit(), width=380, height=45, bgcolor=ft.colors.AMBER_400, color="black"),
+                        ft.ElevatedButton("3. Qabxii Galmeessuu", on_click=lambda _: ui_input_scores(), width=380, height=45, bgcolor=ft.colors.TEAL_400, color="white"),
+                        ft.ElevatedButton("4. Kuusaa Qabxii Ilaaluu", on_click=lambda _: ui_view_all(), width=380, height=45, bgcolor=ft.colors.PURPLE_400, color="white"),
+                        ft.ElevatedButton("5. Qaacceessa Qabxii", on_click=lambda _: ui_view_all(), width=380, height=45, bgcolor=ft.colors.ORANGE_400, color="white"),
+                        ft.ElevatedButton("6. Barattoota Hunda Ilaaluu", on_click=lambda _: ui_view_all(), width=380, height=45, bgcolor=ft.colors.BLUE_GREY_400, color="white"),
+                        ft.ElevatedButton("7. Odeeffannoo Kuusuu (Save)", on_click=save_data, width=380, height=45, bgcolor=ft.colors.GREEN_400, color="white"),
+                        ft.ElevatedButton("8. Odeeffannoo Haquu", on_click=lambda _: ui_delete(), width=380, height=45, bgcolor=ft.colors.RED_400, color="white"),
+                        ft.ElevatedButton("9. Sagantaa Cufi", on_click=lambda _: page.window_close(), width=380, height=45, bgcolor=ft.colors.GREY_400, color="black"),
+                    ], spacing=10, alignment=ft.MainAxisAlignment.CENTER),
+                    padding=20,
+                    alignment=ft.alignment.center
+                )
+            ])
+        )
+        page.update()
+
+    page.on_route_change = lambda _: page.update()
+    build_main_menu()
+
+# --- RUN APP ---
+ft.app(target=main)
